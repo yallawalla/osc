@@ -212,6 +212,7 @@ int main(void)
   MX_USB_OTG_FS_HCD_Init();
   /* USER CODE BEGIN 2 */
 	LCD_Config();
+	BSP_LCD_SetTextColor(LCD_COLOR_YELLOW);
   /* USER CODE END 2 */
 
   /* Infinite loop */
