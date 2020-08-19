@@ -24,7 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stm32746g_discovery_lcd.h"
-#include "stm32746g_discovery_ts.h"
+#include "../MDK-ARM/touch.h"
 
 /* USER CODE END Includes */
 
@@ -121,7 +121,6 @@ static void MX_USB_OTG_FS_HCD_Init(void);
   * @param  None
   * @retval None
   */
-TS_StateTypeDef TS_State;
 static void LCD_Config(void)
 {
   /* LCD Initialization */ 
@@ -153,9 +152,7 @@ static void LCD_Config(void)
   /* Configure the transparency for foreground and background :
      Increase the transparency */
   BSP_LCD_SetTransparency(0, 0);
-  BSP_LCD_SetTransparency(1, 100);
-	
-	BSP_TS_Init(BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
+  BSP_LCD_SetTransparency(1, 100);	
 }
 
 /* USER CODE END 0 */
@@ -212,7 +209,8 @@ int main(void)
   MX_USB_OTG_FS_HCD_Init();
   /* USER CODE BEGIN 2 */
 	LCD_Config();
-	BSP_LCD_SetTextColor(LCD_COLOR_YELLOW);
+	mouseInit(BSP_LCD_GetXSize(),BSP_LCD_GetYSize());
+	BSP_LCD_SetTextColor(LCD_COLOR_LIGHTYELLOW);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -220,11 +218,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-		BSP_TS_GetState(&TS_State);
-		for(int i=1; i< TS_State.touchDetected; ++i) {
-			BSP_LCD_DrawLine(TS_State.touchX[i-1], TS_State.touchY[i-1], TS_State.touchX[i], TS_State.touchY[i]);
-			
-		}
+		mouseScan();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
