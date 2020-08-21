@@ -20,5 +20,6 @@ void mouseInit(uint32_t,uint32_t);
 void mouseScan(void);
 
 extern ADC_HandleTypeDef hadc3;
+extern TIM_HandleTypeDef htim1;
 
 #endif	//__TOUCH_H
