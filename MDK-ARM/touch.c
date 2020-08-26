@@ -25,12 +25,12 @@ void fmove(mouse *m) {
 mouse	m ={ fup, fdown, fmove, 0};
 TS_StateTypeDef TS_State;
 
-uint16_t	*pData, *trigger, *ttt, holdoff=3000;
+uint16_t	*pData, *trigger, ndtr, holdoff=3000;
 
 void mouseInit(uint32_t x,uint32_t y) {
 	BSP_TS_Init(x, y);
-	pData=malloc(4*x*sizeof(uint16_t));
-	HAL_ADC_Start_DMA(&hadc3, (uint32_t *)pData, 4*BSP_LCD_GetXSize());
+	pData=calloc(1,4*2*x*sizeof(uint16_t));
+	HAL_ADC_Start_DMA(&hadc3, (uint32_t *)pData, 4*2*x);
 	HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
 }
 
@@ -61,8 +61,10 @@ void mouseScan(void) {
 
 void HAL_ADC_LevelOutOfWindowCallback(ADC_HandleTypeDef* hadc) {
 	if(!trigger && !holdoff) {
-		trigger=&pData[4*BSP_LCD_GetXSize()-hadc->DMA_Handle->Instance->NDTR-sizeof(uint16_t)];
+		ndtr=hadc->DMA_Handle->Instance->NDTR;
+		trigger=&pData[2*4*BSP_LCD_GetXSize() - ndtr];
 		trigger = (uint16_t *)((uint32_t)trigger & ~3);
+		holdoff=200;
 		
 		BSP_LCD_Clear(LCD_COLOR_DARKGRAY);
 		BSP_LCD_SetTextColor(LCD_COLOR_LIGHTGRAY);
@@ -73,39 +75,38 @@ void HAL_ADC_LevelOutOfWindowCallback(ADC_HandleTypeDef* hadc) {
 	}
 }
 
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-	if(trigger && trigger < &pData[3*BSP_LCD_GetXSize()]) {
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
+	if(trigger && (trigger < &pData[BSP_LCD_GetXSize()] || trigger > &pData[3*BSP_LCD_GetXSize()/4])) {
 		HAL_ADC_Stop_DMA(&hadc3);
-		uint16_t *p=trigger-100;
+		uint16_t *p=trigger-48*2*1;
+		if(p < pData)
+			p=&pData[4*2*BSP_LCD_GetXSize() + p - trigger];
 		for(int i=0; i<BSP_LCD_GetXSize(); ++i) {
-			BSP_LCD_DrawPixel(i,((*p)-0x7ff)/30+BSP_LCD_GetYSize()/2,LCD_COLOR_LIGHTYELLOW);
+			BSP_LCD_DrawPixel(i,(0x7ff-(*p))/30+BSP_LCD_GetYSize()/2,LCD_COLOR_LIGHTYELLOW);
 			++p;
-			BSP_LCD_DrawPixel(i,((*p)-0x7ff)/30+BSP_LCD_GetYSize()/2,LCD_COLOR_LIGHTCYAN);
-			if (++p >= &pData[4*BSP_LCD_GetXSize()])
+			BSP_LCD_DrawPixel(i,(0x7ff-(*p))/30+BSP_LCD_GetYSize()/2,LCD_COLOR_LIGHTCYAN);
+			if (++p >= &pData[4*2*BSP_LCD_GetXSize()])
 				p=pData;
 		}
-		holdoff=1000;
 		trigger=NULL;
-		HAL_ADC_Start_DMA(&hadc3, (uint32_t *)pData, 4*BSP_LCD_GetXSize());
+		HAL_ADC_Start_DMA(&hadc3, (uint32_t *)pData, 4*2*BSP_LCD_GetXSize());
 	}
 }
 
-void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
-	if(trigger && trigger < &pData[BSP_LCD_GetXSize()]) {
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+	if(trigger && (trigger > &pData[BSP_LCD_GetXSize()] && trigger < &pData[3*BSP_LCD_GetXSize()/4])) {
 		HAL_ADC_Stop_DMA(&hadc3);
-		uint16_t *p=trigger-100;
-		if(p < pData)
-			p=&pData[4*BSP_LCD_GetXSize() + p - trigger];
+		uint16_t *p=trigger-48*2*1;
 		for(int i=0; i<BSP_LCD_GetXSize(); ++i) {
-			BSP_LCD_DrawPixel(i,((*p)-0x7ff)/30+BSP_LCD_GetYSize()/2,LCD_COLOR_LIGHTYELLOW);
+			BSP_LCD_DrawPixel(i,(0x7ff-(*p))/30+BSP_LCD_GetYSize()/2,LCD_COLOR_LIGHTYELLOW);
 			++p;
-			BSP_LCD_DrawPixel(i,((*p)-0x7ff)/30+BSP_LCD_GetYSize()/2,LCD_COLOR_LIGHTCYAN);
-			if (++p >= &pData[4*BSP_LCD_GetXSize()])
+			BSP_LCD_DrawPixel(i,(0x7ff-(*p))/30+BSP_LCD_GetYSize()/2,LCD_COLOR_LIGHTCYAN);
+			if (++p >= &pData[4*2*BSP_LCD_GetXSize()])
 				p=pData;
 		}
 		holdoff=1000;
 		trigger=NULL;
-		HAL_ADC_Start_DMA(&hadc3, (uint32_t *)pData, 4*BSP_LCD_GetXSize());
+		HAL_ADC_Start_DMA(&hadc3, (uint32_t *)pData, 4*2*BSP_LCD_GetXSize());
 	}
 }
 
@@ -117,3 +118,4 @@ void	HAL_SYSTICK_Callback(void) {
 	if(holdoff)
 		--holdoff;
 }
+
