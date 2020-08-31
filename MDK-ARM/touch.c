@@ -35,7 +35,8 @@ void mouseInit(uint32_t x,uint32_t y) {
 	BSP_TS_Init(x, y);
 	pData=calloc(1,4*2*x*sizeof(uint16_t));
 	HAL_ADC_Start_DMA(&hadc3, (uint32_t *)pData, 4*2*x);
-	HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
+	//HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
+	HAL_TIM_OnePulse_Start(&htim1, TIM_CHANNEL_1);
 }
 
 void mouseScan(void) {
@@ -72,13 +73,15 @@ void mouseScan(void) {
 		for(int i=0; i<BSP_LCD_GetYSize(); i+=BSP_LCD_GetYSize()/5)
 			BSP_LCD_DrawHLine(0, i, BSP_LCD_GetXSize());	
 		for(int i=0; i<lcdw; ++i) {
-			BSP_LCD_DrawPixel(i,(0x7ff-pData[n])/30+BSP_LCD_GetYSize()/2,LCD_COLOR_LIGHTYELLOW);
-			BSP_LCD_DrawPixel(i,(0x7ff-pData[n+1])/30+BSP_LCD_GetYSize()/2,LCD_COLOR_LIGHTCYAN);
+			BSP_LCD_DrawPixel(i,(0x7ff-(0xfff & pData[n]))/30+BSP_LCD_GetYSize()/2,LCD_COLOR_LIGHTYELLOW);
+			BSP_LCD_DrawPixel(i,(0x7ff-(0xfff & pData[n+1]))/30+BSP_LCD_GetYSize()/2,LCD_COLOR_LIGHTCYAN);
 			n = (n+2) % (2*4*lcdw);
 		}
 		HAL_ADC_Start_DMA(&hadc3, (uint32_t *)pData, 4*2*lcdw);
 		ndtr=EOF;
 		holdoff=0;
+			__HAL_TIM_ENABLE(&htim1);
+
 	}
 }
 
@@ -89,7 +92,7 @@ void HAL_ADC_LevelOutOfWindowCallback(ADC_HandleTypeDef* hadc) {
 }
 
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
-	if(ndtr == EOF)
+	if(ndtr == EOF || holdoff)
 		return;
 	if(ndtr <= 2*lcdw || ndtr >= 3*2*lcdw) {
 		HAL_ADC_Stop_DMA(&hadc3);
@@ -98,7 +101,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-	if(ndtr == EOF)
+	if(ndtr == EOF || holdoff)
 		return;
 	if(ndtr > 2*lcdw || ndtr < 3*2*lcdw) {
 		HAL_ADC_Stop_DMA(&hadc3);
@@ -107,7 +110,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 }
 
 void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc) {
-		HAL_ADC_Stop_DMA(&hadc3);
+//		HAL_ADC_Stop_DMA(&hadc3);
 }
 
 void	HAL_SYSTICK_Callback(void) {
